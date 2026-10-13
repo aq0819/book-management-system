@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>图书借阅系统-后台管理</title>
+    <style>
+        body { font-family: "Microsoft YaHei", sans-serif; background-color: #f4f4f4; margin: 20px; }
+        .container { max-width: 1200px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 5px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .search-box input { padding: 5px; width: 200px; }
+        .search-box button, .btn-add { padding: 6px 15px; background-color: #007bff; color: #fff; border: none; cursor: pointer; border-radius: 3px; }
+        .btn-add { background-color: #28a745; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: center; }
+        th { background-color: #f2f2f2; }
+        tr:nth-child(even) { background-color: #f9f9f9; } /* 隔行变色 */
+        .action-link { color: #007bff; cursor: pointer; margin: 0 5px; text-decoration: none; }
+        .action-link.delete { color: red; }
+        .pagination { margin-top: 20px; text-align: center; }
+        .pagination button { padding: 5px 10px; margin: 0 5px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>图书借阅系统-后台管理</h2>
+        
+        <div class="header">
+            <div class="search-box">
+                图书名称：<input type="text" id="searchName" placeholder="输入图书名称">
+                <button onclick="searchBooks()">查询</button>
+            </div>
+            <button class="btn-add" onclick="alert('新增页面稍后实现')">新增</button>
+        </div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>图书编号</th>
+                    <th>图书分类</th>
+                    <th>图书名称</th>
+                    <th>作者</th>
+                    <th>出版社</th>
+                    <th>入库时间</th>
+                    <th>是否借阅</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody id="bookList">
+                <!-- 数据会通过 JS 动态插入到这里 -->
+            </tbody>
+        </table>
+
+        <div class="pagination">
+            <button onclick="changePage(-1)">上一页</button>
+            <span id="pageInfo"></span>
+            <button onclick="changePage(1)">下一页</button>
+        </div>
+    </div>
+
+    <script>
+        let currentPage = 1;
+        let totalPages = 1;
+
+        // 页面加载时自动获取数据
+        window.onload = function() {
+            fetchBooks();
+        };
+
+        // 获取图书列表
+        function fetchBooks() {
+            const name = document.getElementById('searchName').value;
+            fetch(`/api/books?name=${name}&page=${currentPage}&pageSize=5`)
+                .then(res => res.json())
+                .then(data => {
+                    const tbody = document.getElementById('bookList');
+                    tbody.innerHTML = '';
+                    
+                    data.data.forEach(book => {
+                        const borrowedText = book.borrowed === 1 ? '已借阅' : '未借阅';
+                        // 处理时间格式，只显示年月日
+                        const dateStr = book.creationTime ? new Date(book.creationTime).toISOString().split('T')[0] : '';
+                        
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `
+                            <td>${book.bookCode}</td>
+                            <td>${book.typeName || '未知'}</td>
+                            <td>${book.bookName}</td>
+                            <td>${book.bookAuthor}</td>
+                            <td>${book.publishPress}</td>
+                            <td>${dateStr}</td>
+                            <td>${borrowedText}</td>
+                            <td>
+                                <a class="action-link" onclick="alert('查看详情稍后实现')">查看</a>
+                                <a class="action-link" onclick="alert('修改稍后实现')">修改</a>
+                                <a class="action-link delete" onclick="deleteBook(${book.bookId})">删除</a>
+                            </td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+
+                    // 更新分页信息
+                    totalPages = Math.ceil(data.total / 5);
+                    document.getElementById('pageInfo').innerText = `第 ${currentPage} 页 / 共 ${totalPages} 页`;
+                })
+                .catch(err => console.error('获取数据失败:', err));
+        }
+
+        // 搜索按钮
+        function searchBooks() {
+            currentPage = 1;
+            fetchBooks();
+        }
+
+        // 分页切换
+        function changePage(delta) {
+            const newPage = currentPage + delta;
+            if (newPage >= 1 && newPage <= totalPages) {
+                currentPage = newPage;
+                fetchBooks();
+            }
+        }
+
+        // 删除图书
+        function deleteBook(id) {
+            if (confirm('确定删除该图书信息？')) {
+                fetch(`/api/books/${id}`, { method: 'DELETE' })
+                    .then(res => res.json())
+                    .then(data => {
+                        alert(data.message);
+                        fetchBooks(); // 刷新列表
+                    });
+            }
+        }
+    </script>
+</body>
+</html>
